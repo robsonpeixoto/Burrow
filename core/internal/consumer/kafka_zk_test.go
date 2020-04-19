@@ -111,10 +111,10 @@ func TestKafkaZkClient_watchGroupList(t *testing.T) {
 	newPartitionChan := make(chan zk.Event)
 	newOffsetChan := make(chan zk.Event)
 	mockZookeeper.On("ChildrenW", "/consumers").Return([]string{"testgroup"}, offsetStat, func() <-chan zk.Event { return newGroupChan }(), nil)
-	mockZookeeper.On("ChildrenW", "/consumers/testgroup/offsets").Return([]string{"testtopic"}, offsetStat, func() <-chan zk.Event { return newTopicChan }(), nil)
-	mockZookeeper.On("ExistsW", "/consumers/testgroup/offsets").Return(true, offsetStat, func() <-chan zk.Event { return topicExistsChan }(), nil)
-	mockZookeeper.On("ChildrenW", "/consumers/testgroup/offsets/testtopic").Return([]string{"0"}, offsetStat, func() <-chan zk.Event { return newPartitionChan }(), nil)
-	mockZookeeper.On("GetW", "/consumers/testgroup/offsets/testtopic/0").Return([]byte("81234"), offsetStat, func() <-chan zk.Event { return newOffsetChan }(), nil)
+	mockZookeeper.On("ChildrenW", "/consumers/testgroup/offset").Return([]string{"testtopic"}, offsetStat, func() <-chan zk.Event { return newTopicChan }(), nil)
+	mockZookeeper.On("ExistsW", "/consumers/testgroup/offset").Return(true, offsetStat, func() <-chan zk.Event { return topicExistsChan }(), nil)
+	mockZookeeper.On("ChildrenW", "/consumers/testgroup/offset/testtopic").Return([]string{"0"}, offsetStat, func() <-chan zk.Event { return newPartitionChan }(), nil)
+	mockZookeeper.On("GetW", "/consumers/testgroup/offset/testtopic/0").Return([]byte("81234"), offsetStat, func() <-chan zk.Event { return newOffsetChan }(), nil)
 	mockZookeeper.On("GetW", "/consumers/testgroup/owners/testtopic/0").Return([]byte("testowner"), offsetStat, func() <-chan zk.Event { return newOffsetChan }(), nil)
 
 	watchEventChan := make(chan zk.Event)
@@ -145,22 +145,22 @@ func TestKafkaZkClient_watchGroupList(t *testing.T) {
 		newTopicChan <- zk.Event{
 			Type:  zk.EventNotWatching,
 			State: zk.StateConnected,
-			Path:  "/consumers/testgroup/offsets/shouldntgetcalled",
+			Path:  "/consumers/testgroup/offset/shouldntgetcalled",
 		}
 		topicExistsChan <- zk.Event{
 			Type:  zk.EventNotWatching,
 			State: zk.StateConnected,
-			Path:  "/consumers/testgroup/offsets",
+			Path:  "/consumers/testgroup/offset",
 		}
 		newPartitionChan <- zk.Event{
 			Type:  zk.EventNotWatching,
 			State: zk.StateConnected,
-			Path:  "/consumers/testgroup/offsets/testtopic/shouldntgetcalled",
+			Path:  "/consumers/testgroup/offset/testtopic/shouldntgetcalled",
 		}
 		newOffsetChan <- zk.Event{
 			Type:  zk.EventNotWatching,
 			State: zk.StateConnected,
-			Path:  "/consumers/testgroup/offsets/testtopic/1/shouldntgetcalled",
+			Path:  "/consumers/testgroup/offset/testtopic/1/shouldntgetcalled",
 		}
 
 		secondRequest := <-module.App.StorageChannel
@@ -178,7 +178,7 @@ func TestKafkaZkClient_watchGroupList(t *testing.T) {
 
 func TestKafkaZkClient_resetOffsetWatchAndSend_BadPath(t *testing.T) {
 	mockZookeeper := helpers.MockZookeeperClient{}
-	mockZookeeper.On("GetW", "/consumers/testgroup/offsets/testtopic/0").Return([]byte("81234"), (*zk.Stat)(nil), (<-chan zk.Event)(nil), errors.New("badpath"))
+	mockZookeeper.On("GetW", "/consumers/testgroup/offset/testtopic/0").Return([]byte("81234"), (*zk.Stat)(nil), (<-chan zk.Event)(nil), errors.New("badpath"))
 	mockZookeeper.On("GetW", "/consumers/testgroup/owners/testtopic/0").Return([]byte("testowner"), (*zk.Stat)(nil), (<-chan zk.Event)(nil), nil)
 
 	module := fixtureKafkaZkModule()
@@ -199,7 +199,7 @@ func TestKafkaZkClient_resetOffsetWatchAndSend_BadOffset(t *testing.T) {
 
 	offsetStat := &zk.Stat{Mtime: 894859}
 	newWatchEventChan := make(chan zk.Event)
-	mockZookeeper.On("GetW", "/consumers/testgroup/offsets/testtopic/0").Return([]byte("notanumber"), offsetStat, func() <-chan zk.Event { return newWatchEventChan }(), nil)
+	mockZookeeper.On("GetW", "/consumers/testgroup/offset/testtopic/0").Return([]byte("notanumber"), offsetStat, func() <-chan zk.Event { return newWatchEventChan }(), nil)
 	mockZookeeper.On("GetW", "/consumers/testgroup/owners/testtopic/0").Return([]byte("testowner"), (*zk.Stat)(nil), (<-chan zk.Event)(nil), nil)
 
 	// This will block if a storage request is sent, as nothing is watching that channel
@@ -210,7 +210,7 @@ func TestKafkaZkClient_resetOffsetWatchAndSend_BadOffset(t *testing.T) {
 	newWatchEventChan <- zk.Event{
 		Type:  zk.EventNotWatching,
 		State: zk.StateConnected,
-		Path:  "/consumers/testgroup/offsets/testtopic/1",
+		Path:  "/consumers/testgroup/offset/testtopic/1",
 	}
 
 	mockZookeeper.AssertExpectations(t)
@@ -218,7 +218,7 @@ func TestKafkaZkClient_resetOffsetWatchAndSend_BadOffset(t *testing.T) {
 
 func TestKafkaZkClient_resetPartitionListWatchAndAdd_BadPath(t *testing.T) {
 	mockZookeeper := helpers.MockZookeeperClient{}
-	mockZookeeper.On("ChildrenW", "/consumers/testgroup/offsets/testtopic").Return([]string{}, (*zk.Stat)(nil), (<-chan zk.Event)(nil), errors.New("badpath"))
+	mockZookeeper.On("ChildrenW", "/consumers/testgroup/offset/testtopic").Return([]string{}, (*zk.Stat)(nil), (<-chan zk.Event)(nil), errors.New("badpath"))
 
 	module := fixtureKafkaZkModule()
 	module.Configure("test", "consumer.test")
@@ -232,7 +232,7 @@ func TestKafkaZkClient_resetPartitionListWatchAndAdd_BadPath(t *testing.T) {
 func TestKafkaZkClient_resetTopicListWatchAndAdd_BadPath(t *testing.T) {
 	mockZookeeper := helpers.MockZookeeperClient{}
 	topicExistsChan := make(chan zk.Event)
-	mockZookeeper.On("ExistsW", "/consumers/testgroup/offsets").Return(false, (*zk.Stat)(nil), func() <-chan zk.Event { return topicExistsChan }(), nil)
+	mockZookeeper.On("ExistsW", "/consumers/testgroup/offset").Return(false, (*zk.Stat)(nil), func() <-chan zk.Event { return topicExistsChan }(), nil)
 
 	module := fixtureKafkaZkModule()
 	module.Configure("test", "consumer.test")
@@ -242,7 +242,7 @@ func TestKafkaZkClient_resetTopicListWatchAndAdd_BadPath(t *testing.T) {
 		topicExistsChan <- zk.Event{
 			Type:  zk.EventNotWatching,
 			State: zk.StateConnected,
-			Path:  "/consumers/testgroup/offsets",
+			Path:  "/consumers/testgroup/offset",
 		}
 	}()
 	module.running.Add(1)

@@ -291,9 +291,9 @@ func (module *KafkaZkClient) resetTopicListWatchAndAdd(group string, resetOnly b
 	defer module.running.Done()
 
 	// Wait for the offsets znode for this group to exist. We need to do this because the previous child watch
-	// fires on /consumers/(group) existing, but here we try to read /consumers/(group)/offsets (which might not exist
+	// fires on /consumers/(group) existing, but here we try to read /consumers/(group)/offset (which might not exist
 	// yet)
-	zkPath := module.zookeeperPath + "/" + group + "/offsets"
+	zkPath := module.zookeeperPath + "/" + group + "/offset"
 	logger := module.Log.With(zap.String("group", group))
 	if !module.waitForNodeToExist(zkPath, logger) {
 		// There was an error checking node existence, so we can't continue
@@ -355,7 +355,7 @@ func (module *KafkaZkClient) resetPartitionListWatchAndAdd(group, topic string, 
 	defer module.running.Done()
 
 	// Get the current topic partition list and reset our watch
-	topicPartitions, _, partitionListEventChan, err := module.zk.ChildrenW(module.zookeeperPath + "/" + group + "/offsets/" + topic)
+	topicPartitions, _, partitionListEventChan, err := module.zk.ChildrenW(module.zookeeperPath + "/" + group + "/offset/" + topic)
 	if err != nil {
 		// Can't read the partition list path. Bail for now
 		module.Log.Warn("failed to read partitions",
@@ -420,7 +420,7 @@ func (module *KafkaZkClient) resetOffsetWatchAndSend(group, topic string, partit
 	defer module.running.Done()
 
 	// Get the current offset and reset our watch
-	offsetString, offsetStat, offsetEventChan, err := module.zk.GetW(module.zookeeperPath + "/" + group + "/offsets/" + topic + "/" + strconv.FormatInt(int64(partition), 10))
+	offsetString, offsetStat, offsetEventChan, err := module.zk.GetW(module.zookeeperPath + "/" + group + "/offset/" + topic + "/" + strconv.FormatInt(int64(partition), 10))
 
 	// Get the current owner of the partition
 	consumerID, _, _, _ := module.zk.GetW(module.zookeeperPath + "/" + group + "/owners/" + topic + "/" + strconv.FormatInt(int64(partition), 10)) // nolint:dogsled
